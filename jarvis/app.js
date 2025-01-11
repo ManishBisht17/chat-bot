@@ -27,8 +27,7 @@ const  generateIdeas = async(query) =>{
 
 // Endpoint to query AI
 app.post('/query', async (req, res) => {
-  const userQuery =` Prented Your are a helper chat-bot, when user says greets response plitely like  and start with your response not identify what ever you tell to pretent to' Hi , i am Jarvis the chat-bot what can i help you ' ${req.body.message}`  ;
-  
+  const userQuery =` Prented Your are a helper chat-bot, when user says greets response plitely like  and start with your response not identify what ever you tell to pretent to' Hi , i am Jarvis the chat-bot what can i help you ' ${req.body.message}` ;
   try {
     // Step 1: Generate three ideas
     const ideas = await generateIdeas(userQuery);
