@@ -1,35 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>App Ideas Generator</title>
-  <link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI App Suggestions</title>
 </head>
 <body>
-  <div class="container">
-    <h1>App Ideas Generator</h1>
+    <h1>AI App Suggestions</h1>
     <form id="queryForm">
-      <label for="query">Enter your query:</label>
-      <input type="text" id="query" name="query" placeholder="Kindly provide your query..." required>
-
-      <button type="submit">Generate Ideas</button>
+        <label for="message">Enter Your Query:</label><br>
+        <input type="text" id="message" name="message" required><br><br>
+        <button type="submit">Submit</button>
     </form>
-    <div id="ideasSection" class="hidden">
-      <h2>Generated Ideas</h2>
-      <ul id="ideasList"></ul>
-      <form id="selectionForm" class="hidden">
-        <label for="selection">Select two ideas (e.g., 1 and 3):</label>
-        <input type="text" id="selection" name="selection" placeholder="1 and 3" required>
-        <button type="submit">Get Detailed Suggestions</button>
-      </form>
-      <div id="suggestionsSection" class="hidden">
-        <h2>Detailed Suggestions</h2>
-        <ul id="suggestionsList"></ul>
-      </div>
-    </div>
-  </div>
-  <script type="module" src="app.js"></script>
+    <div id="results"></div>
 
+    <script>
+        document.getElementById("queryForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const message = document.getElementById("message").value;
+
+            try {
+                const response = await fetch("http://localhost:8181/query", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ message }),
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById("results").innerHTML = `
+                        <h2>Suggestions:</h2>
+                        <ul>
+                            ${data.message ? `<li>${data.message}</li>` : ""}
+                        </ul>
+                    `;
+                } else {
+                    document.getElementById("results").innerText = "Error fetching suggestions.";
+                }
+            } catch (err) {
+                console.error(err);
+                document.getElementById("results").innerText = "An error occurred.";
+            }
+        });
+    </script>
 </body>
 </html>
