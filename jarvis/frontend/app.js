@@ -3,13 +3,13 @@ const userInput = document.getElementById("user-input");
 const chatWindow = document.getElementById("chat-window");
 
 let generatedChoices = [];
+let waitingForSelection = false;
+let selectedNumbers = [];
 
-// Enable/disable send button based on input
 userInput.addEventListener("input", () => {
   sendBtn.disabled = !userInput.value.trim();
 });
 
-// Handle Enter key
 userInput.addEventListener("keypress", (e) => {
   if (e.key === "Enter" && !sendBtn.disabled) {
     sendBtn.click();
@@ -25,7 +25,7 @@ const appendMessage = (message, sender) => {
   chatWindow.scrollTop = chatWindow.scrollHeight;
 };
 
-// Function to display generated ideas with selection options
+// Function to display generated ideas
 const displayChoices = (choices) => {
   const choiceContainer = document.createElement("div");
   choiceContainer.className = "choice-container";
@@ -33,33 +33,79 @@ const displayChoices = (choices) => {
   choices.forEach((choice, index) => {
     const choiceDiv = document.createElement("div");
     choiceDiv.className = "choice";
-
-    // Add choice text
-    const choiceText = document.createElement("span");
-    choiceText.textContent = `${index + 1}. ${choice}`;
-    choiceDiv.appendChild(choiceText);
-
-    // Add a button for selection
-    const selectBtn = document.createElement("button");
-    selectBtn.textContent = "Select";
-    selectBtn.className = "select-btn";
-    selectBtn.addEventListener("click", () => selectIdea(index + 1));
-    choiceDiv.appendChild(selectBtn);
-
+    choiceDiv.textContent = `${choice}`;
     choiceContainer.appendChild(choiceDiv);
   });
 
   chatWindow.appendChild(choiceContainer);
   chatWindow.scrollTop = chatWindow.scrollHeight;
-  
-  // Prompt the user to select an idea
-  appendMessage("Please choose one or more ideas by clicking the Select button.", "bot-message");
+
+  appendMessage(
+    "Please type a number (1-3) to select an idea. You can select up to 2 ideas. Type 'done' when finished.",
+    "bot-message"
+  );
+  waitingForSelection = true;
+  selectedNumbers = [];
 };
 
-// Send button click event to generate ideas
-sendBtn.addEventListener("click", async () => {
-  const message = userInput.value.trim();
-  if (!message) return;
+// Function to handle idea selection from user input
+const handleUserInput = async () => {
+  const message = userInput.value.trim().toLowerCase();
+
+  if (waitingForSelection) {
+    if (message === "done") {
+      if (selectedNumbers.length > 0) {
+        waitingForSelection = false;
+        userInput.value = "";
+        await selectIdeas(selectedNumbers);
+      } else {
+        appendMessage(
+          "Please select at least one idea before typing 'done'.",
+          "bot-message"
+        );
+      }
+      return;
+    }
+
+    // Check if input is a valid number (1-3)
+    const selectedNumber = parseInt(message);
+    if (selectedNumber >= 1 && selectedNumber <= 3) {
+      if (selectedNumbers.includes(selectedNumber)) {
+        appendMessage(
+          "You've already selected this idea. Choose a different one or type 'done'.",
+          "bot-message"
+        );
+      } else if (selectedNumbers.length >= 2) {
+        appendMessage(
+          "You can only select up to 2 ideas. Type 'done' to proceed.",
+          "bot-message"
+        );
+      } else {
+        selectedNumbers.push(selectedNumber);
+        userInput.value = "";
+        appendMessage(
+          `You selected option ${selectedNumber}. ${
+            selectedNumbers.length === 2
+              ? "Type 'done' to proceed."
+              : "Select another or type 'done'."
+          }`,
+          "user-message"
+        );
+      }
+    } else if (message.length > 1 && message !== "done") {
+      // If user types a new prompt, reset selection mode
+      waitingForSelection = false;
+      selectedNumbers = [];
+      await handleNewPrompt(message);
+    }
+  } else {
+    await handleNewPrompt(message);
+  }
+};
+
+// Function to handle new prompts
+const handleNewPrompt = async (message) => {
+  if (!message) return appendMessage("first enter any prompt", "bot-message");
 
   appendMessage(message, "user-message");
   sendBtn.disabled = true;
@@ -80,7 +126,6 @@ sendBtn.addEventListener("click", async () => {
     const data = await response.json();
     generatedChoices = data.choices;
     displayChoices(generatedChoices);
-
   } catch (error) {
     appendMessage("Error: Unable to connect to the server.", "bot-message");
   } finally {
@@ -88,10 +133,10 @@ sendBtn.addEventListener("click", async () => {
     sendBtn.disabled = false;
     userInput.focus();
   }
-});
+};
 
-// Function to handle idea selection
-const selectIdea = async (selectedNumber) => {
+// Function to handle multiple idea selections
+const selectIdeas = async (selectedNumbers) => {
   try {
     const response = await fetch("http://localhost:8080/ai/query", {
       method: "POST",
@@ -99,7 +144,7 @@ const selectIdea = async (selectedNumber) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        selectedIdeas: [selectedNumber],
+        selectedIdeas: selectedNumbers,
         choices: generatedChoices,
       }),
     });
@@ -109,14 +154,15 @@ const selectIdea = async (selectedNumber) => {
     }
 
     const data = await response.json();
-    
+
     // Display the detailed suggestion(s)
     data.detailedSuggestions.forEach((suggestion) => {
-      appendMessage(`Idea: ${suggestion.idea}`, "bot-message");
-      appendMessage(`Suggestion: ${suggestion.suggestion}`, "bot-message");
+      appendMessage(`Selected Idea: ${suggestion.idea}`, "bot-message");
+      appendMessage(`Details: ${suggestion.suggestion}`, "bot-message");
     });
-
   } catch (error) {
     appendMessage("Error: Unable to connect to the server.", "bot-message");
   }
 };
+
+sendBtn.addEventListener("click", handleUserInput);

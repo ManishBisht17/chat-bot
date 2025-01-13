@@ -7,11 +7,7 @@ import aiRouter from './routes/aiRoute.js';
 const app = express();
 
 // Middleware Configuration
-app.use(cors({
-  origin: 'http://localhost:8080', // Replace with your frontend URL
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type']
-}));
+app.use(cors());
 
 // Body parser configuration
 app.use(bodyParser.json({ limit: '10mb' }));

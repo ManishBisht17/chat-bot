@@ -14,4 +14,3 @@ router.post('/query',aiController);
 export default router;
 
 
-
