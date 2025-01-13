@@ -31,9 +31,6 @@ app.use((req, res, next) => {
 app.use('/ai', aiRouter);
 
 // Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
-});
 
 // 404 handler
 app.use((req, res) => {
