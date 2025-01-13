@@ -16,19 +16,29 @@ const ERROR_MESSAGES = {
   API_KEY: "Missing Gemini API key",
 };
 
-// Prompts
+// prompts and md handling 
 const PROMPTS = {
   IDEAS: (query) => `Pretend you are a helpful chat-bot. Provide three concise, one-liner app ideas based on the following query: '${query}'`,
   SUGGESTION: (idea) => `
     Provide a detailed suggestion for building an app based on the following idea: "${idea}".
-    The response should:
-    1. List the required technologies (e.g., backend, frontend, database, etc.).
-    2. Describe the recommended approach or methodology for development.
-    3. Highlight any tools, frameworks, or APIs that would be helpful.
-    4. Avoid providing any code snippets.
-    5. Offer practical advice that would help the developer succeed.
+    Format the response in markdown with the following sections:
+
+    ## Technologies Required
+    - List the required technologies
+    
+    ## Development Approach
+    - Describe the recommended methodology
+    
+    ## Tools & Resources
+    - List helpful tools, frameworks, and APIs
+    
+    ## Implementation Tips
+    - Provide practical development advice
+    
+    Please ensure each section is properly formatted with markdown headers and bullet points.
   `,
 };
+
 
 // Initialize Google Generative AI
 if (!process.env.GEMINI_API_KEY) {
@@ -103,13 +113,13 @@ const aiController = async (req, res) => {
   try {
     const { message, selectedIdeas, choices } = req.body;
 
-    // Handle initial query
+    // Handle initial query and the 3 ideas
     if (message && typeof message === 'string') {
       const ideas = await generateIdeas(message);
       return res.status(200).json({
         query: message,
         choices: ideas.map((idea, index) => `${index + 1}. ${idea}`),
-        prompt: "Please choose one or more ideas by typing their numbers (e.g., 1, 2).",
+       
       });
     }
 

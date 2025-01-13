@@ -6,6 +6,21 @@ let generatedChoices = [];
 let waitingForSelection = false;
 let selectedNumbers = [];
 
+// Initialize marked for markdown parsing
+marked.setOptions({
+  breaks: true,
+  gfm: true,
+  headerIds: false,
+  mangle: false
+});
+
+// Helper function to sanitize HTML content
+const sanitizeHTML = (text) => {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+};
+
 userInput.addEventListener("input", () => {
   sendBtn.disabled = !userInput.value.trim();
 });
@@ -16,11 +31,21 @@ userInput.addEventListener("keypress", (e) => {
   }
 });
 
-// Function to append messages to the chat window
-const appendMessage = (message, sender) => {
+// Enhanced function to append messages to the chat window
+const appendMessage = (message, sender, isMarkdown = false) => {
   const messageDiv = document.createElement("div");
   messageDiv.className = `message ${sender}`;
-  messageDiv.textContent = message;
+
+  if (isMarkdown && sender === 'bot-message') {
+    // Parse markdown for bot messages that contain markdown
+    messageDiv.classList.add('markdown-content');
+    const sanitizedMessage = sanitizeHTML(message);
+    messageDiv.innerHTML = marked.parse(sanitizedMessage);
+  } else {
+    // Regular text for user messages and non-markdown bot messages
+    messageDiv.textContent = message;
+  }
+
   chatWindow.appendChild(messageDiv);
   chatWindow.scrollTop = chatWindow.scrollHeight;
 };
@@ -33,7 +58,18 @@ const displayChoices = (choices) => {
   choices.forEach((choice, index) => {
     const choiceDiv = document.createElement("div");
     choiceDiv.className = "choice";
-    choiceDiv.textContent = `${choice}`;
+    
+    // Add choice number and hover effect
+    const numberSpan = document.createElement("span");
+    numberSpan.className = "choice-number";
+    numberSpan.textContent = `${index + 1}. `;
+    
+    const textSpan = document.createElement("span");
+    textSpan.className = "choice-text";
+    textSpan.textContent = choice.replace(/^\d+\.\s*/, '');
+    
+    choiceDiv.appendChild(numberSpan);
+    choiceDiv.appendChild(textSpan);
     choiceContainer.appendChild(choiceDiv);
   });
 
@@ -41,7 +77,7 @@ const displayChoices = (choices) => {
   chatWindow.scrollTop = chatWindow.scrollHeight;
 
   appendMessage(
-    "Please type a number (1-3) to select an idea. You can select up to 2 ideas. Type 'done' when finished.",
+    "Please choose one idea or more ideas by typing their numbers (e.g., 1 and 2).",
     "bot-message"
   );
   waitingForSelection = true;
@@ -51,7 +87,6 @@ const displayChoices = (choices) => {
 // Function to handle idea selection from user input
 const handleUserInput = async () => {
   const message = userInput.value.trim().toLowerCase();
-  console.log(message);
   
   if (waitingForSelection) {
     // Handle single number input
@@ -122,31 +157,22 @@ const handleUserInput = async () => {
   }
 };
 
-// Function to handle new prompts
+// Function to handle new prompts using axios
 const handleNewPrompt = async (message) => {
-  if (!message) return appendMessage("first enter any prompt", "bot-message");
+  if (!message) return appendMessage("First enter any prompt", "bot-message");
 
   appendMessage(message, "user-message");
   sendBtn.disabled = true;
 
   try {
-    const response = await fetch("http://localhost:8080/ai/query", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ message }),
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to get a response from the server.");
-    }
-
-    const data = await response.json();
-    generatedChoices = data.choices;
+    const response = await axios.post("http://localhost:8080/ai/query", { message });
+    generatedChoices = response.data.choices;
     displayChoices(generatedChoices);
   } catch (error) {
-    appendMessage("Error: Unable to connect to the server.", "bot-message");
+    appendMessage(
+      `Error: ${error.response?.data?.message || "Unable to connect to the server."}`,
+      "bot-message"
+    );
   } finally {
     userInput.value = "";
     sendBtn.disabled = false;
@@ -154,34 +180,48 @@ const handleNewPrompt = async (message) => {
   }
 };
 
-// Function to handle multiple idea selections
+// Enhanced function to handle multiple idea selections using axios
 const selectIdeas = async (selectedNumbers) => {
   try {
-    const response = await fetch("http://localhost:8080/ai/query", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        selectedIdeas: selectedNumbers,
-        choices: generatedChoices,
-      }),
+    const response = await axios.post("http://localhost:8080/ai/query", {
+      selectedIdeas: selectedNumbers,
+      choices: generatedChoices
     });
 
-    if (!response.ok) {
-      throw new Error("Failed to get a response from the server.");
-    }
-
-    const data = await response.json();
-
-    // Display the detailed suggestion(s)
-    data.detailedSuggestions.forEach((suggestion) => {
+    // Display the detailed suggestion(s) with markdown formatting
+    response.data.detailedSuggestions.forEach((suggestion) => {
+      // Display the selected idea without markdown
       appendMessage(`Selected Idea: ${suggestion.idea}`, "bot-message");
-      appendMessage(`Details: ${suggestion.suggestion}`, "bot-message");
+      
+      // Display the detailed suggestion with markdown formatting
+      appendMessage(suggestion.suggestion, "bot-message", true);
     });
+
+    // Reset selection state after displaying suggestions
+    waitingForSelection = false;
   } catch (error) {
-    appendMessage("Error: Unable to connect to the server.", "bot-message");
+    appendMessage(
+      `Error: ${error.response?.data?.message || "Unable to connect to the server."}`,
+      "bot-message"
+    );
   }
 };
 
+// Handle click events for the send button
 sendBtn.addEventListener("click", handleUserInput);
+
+// Add loading indicator functions
+const showLoadingIndicator = () => {
+  const loadingDiv = document.createElement("div");
+  loadingDiv.className = "loading-indicator";
+  loadingDiv.innerHTML = "...";
+  chatWindow.appendChild(loadingDiv);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+};
+
+const removeLoadingIndicator = () => {
+  const loadingIndicator = chatWindow.querySelector(".loading-indicator");
+  if (loadingIndicator) {
+    loadingIndicator.remove();
+  }
+};
