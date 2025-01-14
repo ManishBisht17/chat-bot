@@ -9,9 +9,4 @@ const server = app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (err) => {
-  console.error('Unhandled Promise Rejection:', err);
-  // Gracefully shutdown on critical errors
-  server.close(() => process.exit(1));
-});
+

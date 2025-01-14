@@ -87,75 +87,55 @@ const displayChoices = (choices) => {
 // Function to handle idea selection from user input
 const handleUserInput = async () => {
   const message = userInput.value.trim().toLowerCase();
-  
+
   if (waitingForSelection) {
-    // Handle single number input
+    const parseNumbers = (msg) =>
+      msg.split('and').map((num) => parseInt(num.trim())).filter((num) => !isNaN(num));
+
+    const isValidNumber = (num) => num >= 1 && num <= 3;
+
     if (/^\d+$/.test(message)) {
       const selectedNumber = parseInt(message);
-      if (selectedNumber >= 1 && selectedNumber <= 3) {
-        if (selectedNumbers.includes(selectedNumber)) {
-          appendMessage(
-            "You've already selected this idea. Choose a different one.",
-            "bot-message"
-          );
-        } else if (selectedNumbers.length >= 2) {
-          appendMessage(
-            "You can only select up to 2 ideas.",
-            "bot-message"
-          );
-        } else {
-          selectedNumbers.push(selectedNumber);
-          userInput.value = "";
-          await selectIdeas(selectedNumbers);
-        }
-      } else {
-        appendMessage(
-          "Please select a number between 1 and 3.",
+      if (!isValidNumber(selectedNumber)) {
+        return appendMessage("Please select a number between 1 and 3.", "bot-message");
+      }
+      if (selectedNumbers.includes(selectedNumber)) {
+        return appendMessage("You've already selected this idea. Choose a different one.", "bot-message");
+      }
+      if (selectedNumbers.length >= 2) {
+        return appendMessage("You can only select up to 2 ideas.", "bot-message");
+      }
+      selectedNumbers.push(selectedNumber);
+      userInput.value = "";
+      return await selectIdeas(selectedNumbers);
+    }
+
+    if (message.includes('and')) {
+      const numbers = parseNumbers(message);
+      if (numbers.length !== 2 || !numbers.every(isValidNumber)) {
+        return appendMessage(
+          "Please use format like '1 and 2' with numbers between 1 and 3.",
           "bot-message"
         );
       }
-    }
-    // Handle "number and number" format
-    else if (message.includes('and')) {
-      const numbers = message.split('and')
-        .map(num => parseInt(num.trim()))
-        .filter(num => !isNaN(num));
-      
-      if (numbers.length === 2) {
-        if (numbers.every(num => num >= 1 && num <= 3)) {
-          if (numbers[0] === numbers[1]) {
-            appendMessage(
-              "Please select two different numbers.",
-              "bot-message"
-            );
-          } else {
-            selectedNumbers = numbers;
-            userInput.value = "";
-            await selectIdeas(selectedNumbers);
-          }
-        } else {
-          appendMessage(
-            "Please select numbers between 1 and 3.",
-            "bot-message"
-          );
-        }
-      } else {
-        appendMessage(
-          "Please use format like '1 and 2' or just enter a single number.",
-          "bot-message"
-        );
+      if (numbers[0] === numbers[1]) {
+        return appendMessage("Please select two different numbers.", "bot-message");
       }
+      selectedNumbers = numbers;
+      userInput.value = "";
+      return await selectIdeas(selectedNumbers);
     }
-    // Handle other inputs as new prompts
-    else if (message.length > 0) {
+
+    if (message.length > 0) {
       waitingForSelection = false;
       selectedNumbers = [];
-      await handleNewPrompt(message);
+      return await handleNewPrompt(message);
     }
   } else {
     await handleNewPrompt(message);
   }
 };
+
 
 // Function to handle new prompts using axios
 const handleNewPrompt = async (message) => {
@@ -165,7 +145,7 @@ const handleNewPrompt = async (message) => {
   sendBtn.disabled = true;
 
   try {
-    const response = await axios.post("http://localhost:8080/ai/query", { message });
+    const response = await axios.post("http://localhost:8080/ai/query", { message });//1 2 3
     generatedChoices = response.data.choices;
     displayChoices(generatedChoices);
   } catch (error) {
@@ -184,7 +164,7 @@ const handleNewPrompt = async (message) => {
 const selectIdeas = async (selectedNumbers) => {
   try {
     const response = await axios.post("http://localhost:8080/ai/query", {
-      selectedIdeas: selectedNumbers,
+      selectedIdeas: selectedNumbers,//
       choices: generatedChoices
     });
 
@@ -211,17 +191,3 @@ const selectIdeas = async (selectedNumbers) => {
 sendBtn.addEventListener("click", handleUserInput);
 
 // Add loading indicator functions
-const showLoadingIndicator = () => {
-  const loadingDiv = document.createElement("div");
-  loadingDiv.className = "loading-indicator";
-  loadingDiv.innerHTML = "...";
-  chatWindow.appendChild(loadingDiv);
-  chatWindow.scrollTop = chatWindow.scrollHeight;
-};
-
-const removeLoadingIndicator = () => {
-  const loadingIndicator = chatWindow.querySelector(".loading-indicator");
-  if (loadingIndicator) {
-    loadingIndicator.remove();
-  }
-};
