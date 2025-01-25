@@ -34,6 +34,9 @@ const PROMPTS = {
     
     ## Implementation Tips
     - Provide practical development advice
+
+    ## Deploying Sites
+    -  According to the app provide the deploying sites
     
     Please ensure each section is properly formatted with markdown headers and bullet points.
   `,
