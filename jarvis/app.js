@@ -1,7 +1,7 @@
-import express from 'express';
-import bodyParser from 'body-parser';
-import cors from 'cors';
-import aiRouter from './routes/aiRoute.js';
+import express from "express";
+import bodyParser from "body-parser";
+import cors from "cors";
+import aiRouter from "./routes/aiRoute.js";
 
 // Create Express app
 const app = express();
@@ -13,15 +13,11 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // Routes
-app.use('/ai', aiRouter);
+app.use("/ai", aiRouter);
 
-
-// Error 404 handler 
+// Error 404 handler
 app.use((req, res) => {
-  res.status(404).json({ error: 'Route not found' });
+  res.status(404).json({ error: "Route not found" });
 });
-
-
-
 
 export default app;

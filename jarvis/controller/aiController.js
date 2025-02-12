@@ -1,5 +1,5 @@
-import dotenv from 'dotenv';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import dotenv from "dotenv";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 dotenv.config();
 
@@ -8,17 +8,10 @@ const MIN_IDEAS = 3;
 const MODEL_NAME = "gemini-1.5-flash";
 const PLACEHOLDER_IDEA = "Additional innovative app idea will be generated";
 
-// Error messages
-const ERROR_MESSAGES = {
-  GENERATION: "Failed to generate ideas",
-  SUGGESTION: "Failed to generate detailed suggestion",
-  INVALID_INPUT: "Invalid input. Please provide a valid message or selection.",
-  API_KEY: "Missing Gemini API key",
-};
-
-// prompts and md handling 
+// prompts and md handling
 const PROMPTS = {
-  IDEAS: (query) => `Pretend you are a helpful chat-bot. Provide three concise, one-liner app ideas based on the following query: '${query}'`,
+  IDEAS: (query) =>
+    `Pretend you are a helpful chat-bot. Provide three concise, one-liner app ideas based on the following query: '${query}'`,
   SUGGESTION: (idea) => `
     Provide a detailed suggestion for building an app based on the following idea: "${idea}".
     Format the response in markdown with the following sections:
@@ -42,10 +35,9 @@ const PROMPTS = {
   `,
 };
 
-
 // Initialize Google Generative AI
 if (!process.env.GEMINI_API_KEY) {
-  throw new Error(ERROR_MESSAGES.API_KEY);
+  throw new Error("Missing Gemini API key");
 }
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -61,9 +53,9 @@ const generateIdeas = async (query) => {
     const result = await model.generateContent(PROMPTS.IDEAS(query));
     const generatedIdeas = result.response
       .text()
-      .split('\n')
-      .filter(line => line.trim() !== '')
-      .map(idea => idea.replace(/^\d+\.\s*/, '')); // Remove any numbering
+      .split("\n")
+      .filter((line) => line.trim() !== "")
+      .map((idea) => idea.replace(/^\d+\.\s*/, "")); // Remove any numbering
 
     // Ensure minimum number of ideas
     while (generatedIdeas.length < MIN_IDEAS) {
@@ -73,7 +65,7 @@ const generateIdeas = async (query) => {
     return generatedIdeas.slice(0, MIN_IDEAS);
   } catch (error) {
     console.error("Error generating ideas:", error);
-    throw new Error(ERROR_MESSAGES.GENERATION);
+    throw new Error("Failed to generate ideas");
   }
 };
 
@@ -88,7 +80,7 @@ const generateDetailedSuggestion = async (idea) => {
     return result.response.text();
   } catch (error) {
     console.error("Error generating detailed suggestion:", error);
-    throw new Error(ERROR_MESSAGES.SUGGESTION);
+    throw new Error("Failed to generate detailed suggestion");
   }
 };
 
@@ -99,12 +91,12 @@ const generateDetailedSuggestion = async (idea) => {
  * @returns {boolean} Validation result
  */
 const validateSelection = (selectedIdeas, choices) => {
-  return Array.isArray(selectedIdeas) &&
-    selectedIdeas.every(index => 
-      Number.isInteger(index) && 
-      index > 0 && 
-      index <= choices.length
-    );
+  return (
+    Array.isArray(selectedIdeas) &&
+    selectedIdeas.every(
+      (index) => Number.isInteger(index) && index > 0 && index <= choices.length
+    )
+  );
 };
 
 /**
@@ -117,32 +109,39 @@ const aiController = async (req, res) => {
     const { message, selectedIdeas, choices } = req.body;
 
     // Handle initial query and the 3 ideas
-    if (message && typeof message === 'string') {
+    if (message && typeof message === "string") {
       const ideas = await generateIdeas(message);
       return res.status(200).json({
         query: message,
         choices: ideas.map((idea, index) => `${index + 1}. ${idea}`),
-       
       });
     }
 
     // Handle idea selection
     if (selectedIdeas && choices) {
       if (!validateSelection(selectedIdeas, choices)) {
-        return res.status(400).json({ error: ERROR_MESSAGES.INVALID_INPUT });
+        return res.status(400).json({
+          error: "Invalid input. Please provide a valid message or selection.",
+        });
       }
 
       const detailedSuggestions = await Promise.all(
         selectedIdeas.map(async (selectedIndex) => ({
           idea: choices[selectedIndex - 1],
-          suggestion: await generateDetailedSuggestion(choices[selectedIndex - 1])
+          suggestion: await generateDetailedSuggestion(
+            choices[selectedIndex - 1]
+          ),
         }))
       );
 
       return res.status(200).json({ detailedSuggestions });
     }
 
-    return res.status(400).json({ error: ERROR_MESSAGES.INVALID_INPUT });
+    return res
+      .status(400)
+      .json({
+        error: "Invalid input. Please provide a valid message or selection.",
+      });
   } catch (error) {
     console.error("Controller error:", error);
     return res.status(500).json({ error: error.message });

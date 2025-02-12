@@ -11,12 +11,12 @@ marked.setOptions({
   breaks: true,
   gfm: true,
   headerIds: false,
-  mangle: false
+  mangle: false,
 });
 
 // Helper function to sanitize HTML content
 const sanitizeHTML = (text) => {
-  const div = document.createElement('div');
+  const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
 };
@@ -36,9 +36,9 @@ const appendMessage = (message, sender, isMarkdown = false) => {
   const messageDiv = document.createElement("div");
   messageDiv.className = `message ${sender}`;
 
-  if (isMarkdown && sender === 'bot-message') {
+  if (isMarkdown && sender === "bot-message") {
     // Parse markdown for bot messages that contain markdown
-    messageDiv.classList.add('markdown-content');
+    messageDiv.classList.add("markdown-content");
     const sanitizedMessage = sanitizeHTML(message);
     messageDiv.innerHTML = marked.parse(sanitizedMessage);
   } else {
@@ -58,16 +58,16 @@ const displayChoices = (choices) => {
   choices.forEach((choice, index) => {
     const choiceDiv = document.createElement("div");
     choiceDiv.className = "choice";
-    
+
     // Add choice number and hover effect
     const numberSpan = document.createElement("span");
     numberSpan.className = "choice-number";
     numberSpan.textContent = `${index + 1}. `;
-    
+
     const textSpan = document.createElement("span");
     textSpan.className = "choice-text";
-    textSpan.textContent = choice.replace(/^\d+\.\s*/, '');
-    
+    textSpan.textContent = choice.replace(/^\d+\.\s*/, "");
+
     choiceDiv.appendChild(numberSpan);
     choiceDiv.appendChild(textSpan);
     choiceContainer.appendChild(choiceDiv);
@@ -90,27 +90,39 @@ const handleUserInput = async () => {
 
   if (waitingForSelection) {
     const parseNumbers = (msg) =>
-      msg.split('and').map((num) => parseInt(num.trim())).filter((num) => !isNaN(num));
+      msg
+        .split("and")
+        .map((num) => parseInt(num.trim()))
+        .filter((num) => !isNaN(num));
 
     const isValidNumber = (num) => num >= 1 && num <= 3;
 
     if (/^\d+$/.test(message)) {
       const selectedNumber = parseInt(message);
       if (!isValidNumber(selectedNumber)) {
-        return appendMessage("Please select a number between 1 and 3.", "bot-message");
+        return appendMessage(
+          "Please select a number between 1 and 3.",
+          "bot-message"
+        );
       }
       if (selectedNumbers.includes(selectedNumber)) {
-        return appendMessage("You've already selected this idea. Choose a different one.", "bot-message");
+        return appendMessage(
+          "You've already selected this idea. Choose a different one.",
+          "bot-message"
+        );
       }
       if (selectedNumbers.length >= 2) {
-        return appendMessage("You can only select up to 2 ideas.", "bot-message");
+        return appendMessage(
+          "You can only select up to 2 ideas.",
+          "bot-message"
+        );
       }
       selectedNumbers.push(selectedNumber);
       userInput.value = "";
       return await selectIdeas(selectedNumbers);
     }
 
-    if (message.includes('and')) {
+    if (message.includes("and")) {
       const numbers = parseNumbers(message);
       if (numbers.length !== 2 || !numbers.every(isValidNumber)) {
         return appendMessage(
@@ -119,7 +131,10 @@ const handleUserInput = async () => {
         );
       }
       if (numbers[0] === numbers[1]) {
-        return appendMessage("Please select two different numbers.", "bot-message");
+        return appendMessage(
+          "Please select two different numbers.",
+          "bot-message"
+        );
       }
       selectedNumbers = numbers;
       userInput.value = "";
@@ -136,7 +151,6 @@ const handleUserInput = async () => {
   }
 };
 
-
 // Function to handle new prompts using axios
 const handleNewPrompt = async (message) => {
   if (!message) return appendMessage("First enter any prompt", "bot-message");
@@ -145,12 +159,16 @@ const handleNewPrompt = async (message) => {
   sendBtn.disabled = true;
 
   try {
-    const response = await axios.post("http://localhost:8080/ai/query", { message });//1 2 3
+    const response = await axios.post("http://localhost:8080/ai/query", {
+      message,
+    }); //1 2 3
     generatedChoices = response.data.choices;
     displayChoices(generatedChoices);
   } catch (error) {
     appendMessage(
-      `Error: ${error.response?.data?.message || "Unable to connect to the server."}`,
+      `Error: ${
+        error.response?.data?.message || "Unable to connect to the server."
+      }`,
       "bot-message"
     );
   } finally {
@@ -164,15 +182,15 @@ const handleNewPrompt = async (message) => {
 const selectIdeas = async (selectedNumbers) => {
   try {
     const response = await axios.post("http://localhost:8080/ai/query", {
-      selectedIdeas: selectedNumbers,//
-      choices: generatedChoices
+      selectedIdeas: selectedNumbers,
+      choices: generatedChoices,
     });
 
     // Display the detailed suggestion(s) with markdown formatting
     response.data.detailedSuggestions.forEach((suggestion) => {
       // Display the selected idea without markdown
       appendMessage(`Selected Idea: ${suggestion.idea}`, "bot-message");
-      
+
       // Display the detailed suggestion with markdown formatting
       appendMessage(suggestion.suggestion, "bot-message", true);
     });
@@ -181,7 +199,9 @@ const selectIdeas = async (selectedNumbers) => {
     waitingForSelection = false;
   } catch (error) {
     appendMessage(
-      `Error: ${error.response?.data?.message || "Unable to connect to the server."}`,
+      `Error: ${
+        error.response?.data?.message || "Unable to connect to the server."
+      }`,
       "bot-message"
     );
   }
