@@ -84,12 +84,8 @@ const generateDetailedSuggestion = async (idea) => {
   }
 };
 
-/**
- * Validates and sanitizes the selected ideas
- * @param {number[]} selectedIdeas - Array of selected idea indices
- * @param {string[]} choices - Available choices
- * @returns {boolean} Validation result
- */
+//alidates and sanitizes the selected ideas
+
 const validateSelection = (selectedIdeas, choices) => {
   return (
     Array.isArray(selectedIdeas) &&
@@ -137,11 +133,9 @@ const aiController = async (req, res) => {
       return res.status(200).json({ detailedSuggestions });
     }
 
-    return res
-      .status(400)
-      .json({
-        error: "Invalid input. Please provide a valid message or selection.",
-      });
+    return res.status(400).json({
+      error: "Invalid input. Please provide a valid message or selection.",
+    });
   } catch (error) {
     console.error("Controller error:", error);
     return res.status(500).json({ error: error.message });

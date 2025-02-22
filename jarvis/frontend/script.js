@@ -14,7 +14,6 @@ marked.setOptions({
   mangle: false,
 });
 
-// Helper function to sanitize HTML content
 const sanitizeHTML = (text) => {
   const div = document.createElement("div");
   div.textContent = text;
